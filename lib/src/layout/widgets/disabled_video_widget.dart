@@ -15,10 +15,11 @@ class _DisabledVideoWidgetState extends State<DisabledVideoWidget> {
       color: Colors.black,
       padding: const EdgeInsets.all(8.0),
       child: Center(
-          child: Icon(
-        Icons.person_rounded,
-        color: Colors.white,
-      )),
+        child: Icon(
+          Icons.person_rounded,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 }

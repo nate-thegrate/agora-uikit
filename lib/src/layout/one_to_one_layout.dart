@@ -35,32 +35,34 @@ class _OneToOneLayoutState extends State<OneToOneLayout> {
   Offset position = Offset(5, 5);
 
   Widget _getLocalViews() {
-    return widget.client.sessionController.value.isScreenShared
-        ? AgoraVideoView(
-            controller: VideoViewController(
-              rtcEngine: widget.client.sessionController.value.engine!,
-              canvas: const VideoCanvas(
-                uid: 0,
-                sourceType: VideoSourceType.videoSourceScreen,
-              ),
-            ),
-          )
-        : AgoraVideoView(
-            controller: VideoViewController(
-              rtcEngine: widget.client.sessionController.value.engine!,
-              canvas: VideoCanvas(uid: 0, renderMode: widget.renderModeType),
-            ),
-          );
+    final agoraSettings = widget.client.sessionController.value;
+    if (agoraSettings.isScreenShared) {
+      return AgoraVideoView(
+        controller: VideoViewController(
+          rtcEngine: agoraSettings.engine!,
+          canvas: const VideoCanvas(
+            uid: 0,
+            sourceType: VideoSourceType.videoSourceScreen,
+          ),
+        ),
+      );
+    }
+    return AgoraVideoView(
+      controller: VideoViewController(
+        rtcEngine: agoraSettings.engine!,
+        canvas: VideoCanvas(uid: 0, renderMode: widget.renderModeType),
+      ),
+    );
   }
 
   Widget _getRemoteViews(int uid) {
+    final agoraSettings = widget.client.sessionController.value;
     return AgoraVideoView(
       controller: VideoViewController.remote(
-        rtcEngine: widget.client.sessionController.value.engine!,
+        rtcEngine: agoraSettings.engine!,
         canvas: VideoCanvas(uid: uid, renderMode: widget.renderModeType),
         connection: RtcConnection(
-          channelId:
-              widget.client.sessionController.value.connectionData!.channelName,
+          channelId: agoraSettings.connectionData!.channelName,
         ),
       ),
     );

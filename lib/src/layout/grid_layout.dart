@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:agora_uikit/models/agora_user.dart';
 import 'package:agora_uikit/src/layout/widgets/disabled_video_widget.dart';
@@ -31,78 +33,56 @@ class GridLayout extends StatefulWidget {
 
 class _GridLayoutState extends State<GridLayout> {
   List<Widget> _getRenderViews() {
-    final List<StatefulWidget> list = [];
+    final disabledVideoWidget = DisabledVideoStfWidget(
+      disabledVideoWidget: widget.disabledVideoWidget,
+    );
+    final agoraSettings = widget.client.sessionController.value;
 
-    if (widget.client.agoraChannelData?.clientRoleType ==
-            ClientRoleType.clientRoleBroadcaster ||
-        widget.client.agoraChannelData?.clientRoleType == null) {
-      widget.client.sessionController.value.isLocalVideoDisabled
-          ? list.add(
-              DisabledVideoStfWidget(
-                disabledVideoWidget: widget.disabledVideoWidget,
+    return [
+      if (widget.client.agoraChannelData?.clientRoleType
+          case ClientRoleType.clientRoleBroadcaster || null)
+        if (agoraSettings.isLocalVideoDisabled)
+          disabledVideoWidget
+        else
+          AgoraVideoView(
+            controller: VideoViewController(
+              rtcEngine: agoraSettings.engine!,
+              canvas: VideoCanvas(uid: 0, renderMode: widget.renderModeType),
+            ),
+          ),
+      for (AgoraUser user in agoraSettings.users)
+        if (user.clientRoleType == ClientRoleType.clientRoleBroadcaster)
+          disabledVideoWidget
+        else
+          AgoraVideoView(
+            controller: VideoViewController.remote(
+              rtcEngine: agoraSettings.engine!,
+              canvas: VideoCanvas(
+                uid: user.uid,
+                renderMode: widget.renderModeType,
               ),
-            )
-          : list.add(
-              AgoraVideoView(
-                controller: VideoViewController(
-                  rtcEngine: widget.client.sessionController.value.engine!,
-                  canvas: VideoCanvas(
-                    uid: 0,
-                    renderMode: widget.renderModeType,
-                  ),
-                ),
+              connection: RtcConnection(
+                channelId: agoraSettings.connectionData!.channelName,
               ),
-            );
-    }
-
-    for (AgoraUser user in widget.client.sessionController.value.users) {
-      if (user.clientRoleType == ClientRoleType.clientRoleBroadcaster) {
-        user.videoDisabled
-            ? list.add(
-                DisabledVideoStfWidget(
-                  disabledVideoWidget: widget.disabledVideoWidget,
-                ),
-              )
-            : list.add(
-                AgoraVideoView(
-                  controller: VideoViewController.remote(
-                    rtcEngine: widget.client.sessionController.value.engine!,
-                    canvas: VideoCanvas(
-                      uid: user.uid,
-                      renderMode: widget.renderModeType,
-                    ),
-                    connection: RtcConnection(
-                      channelId: widget.client.sessionController.value
-                          .connectionData!.channelName,
-                    ),
-                  ),
-                ),
-              );
-      }
-    }
-
-    return list;
-  }
-
-  Widget _videoView(view) {
-    return Expanded(child: Container(child: view));
+            ),
+          ),
+    ];
   }
 
   /// Video view row wrapper
   Widget _expandedVideoRow(List<Widget> views) {
-    final wrappedViews = views.map<Widget>(_videoView).toList();
     return Expanded(
       child: Row(
-        children: wrappedViews,
+        children: [for (final view in views) Expanded(child: view)],
       ),
     );
   }
 
   Widget _viewGrid() {
     final views = _getRenderViews();
-    if (views.isEmpty) {
-      return Expanded(
-        child: Container(
+    switch (views.length) {
+      case 0:
+        return Container(
           color: Colors.white,
           child: Center(
             child: Text(
@@ -110,46 +90,35 @@ class _GridLayoutState extends State<GridLayout> {
               style: TextStyle(color: Colors.black),
             ),
           ),
-        ),
-      );
-    } else if (views.length == 1) {
-      return Container(
-        child: Column(
-          children: <Widget>[_videoView(views[0])],
-        ),
-      );
-    } else if (views.length == 2) {
-      return Container(
-          child: Column(
-        children: <Widget>[
-          _expandedVideoRow([views[0]]),
-          _expandedVideoRow([views[1]])
-        ],
-      ));
-    } else if (views.length > 2 && views.length % 2 == 0) {
-      return Container(
-        child: Column(
+        );
+      case 1:
+        return SizedBox.expand(child: views[0]);
+      case 2:
+        return Column(
           children: [
-            for (int i = 0; i < views.length; i = i + 2)
-              _expandedVideoRow(
-                views.sublist(i, i + 2),
-              ),
+            _expandedVideoRow([views[0]]),
+            _expandedVideoRow([views[1]]),
           ],
-        ),
-      );
-    } else if (views.length > 2 && views.length % 2 != 0) {
-      return Container(
-        child: Column(
-          children: <Widget>[
-            for (int i = 0; i < views.length; i = i + 2)
-              i == (views.length - 1)
-                  ? _expandedVideoRow(views.sublist(i, i + 1))
-                  : _expandedVideoRow(views.sublist(i, i + 2)),
+        );
+      case final int length when length % 2 == 0:
+        return Column(
+          children: [
+            for (int i = 0; i < views.length; i += 2)
+              _expandedVideoRow(views.sublist(i, i + 2)),
           ],
-        ),
-      );
+        );
+      default:
+        return Container(
+          child: Column(
+            children: <Widget>[
+              for (int i = 0; i < views.length; i += 2)
+                _expandedVideoRow(
+                  views.sublist(i, min(i + 2, views.length)),
+                ),
+            ],
+          ),
+        );
     }
-    return Container();
   }
 
   @override
@@ -161,18 +130,13 @@ class _GridLayoutState extends State<GridLayout> {
           child: Stack(
             children: [
               _viewGrid(),
-              widget.showNumberOfUsers == null ||
-                      widget.showNumberOfUsers == false
-                  ? Container()
-                  : Positioned.fill(
-                      child: Align(
-                        alignment: Alignment.topRight,
-                        child: NumberOfUsers(
-                          userCount: widget
-                              .client.sessionController.value.users.length,
-                        ),
-                      ),
-                    ),
+              if (widget.showNumberOfUsers ?? false)
+                Positioned.fill(
+                  child: Align(
+                    alignment: Alignment.topRight,
+                    child: NumberOfUsers(userCount: counter.users.length),
+                  ),
+                ),
             ],
           ),
         );

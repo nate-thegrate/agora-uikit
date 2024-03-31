@@ -63,504 +63,294 @@ class FloatingLayout extends StatefulWidget {
 
 class _FloatingLayoutState extends State<FloatingLayout> {
   Widget _getLocalViews() {
-    return widget.client.sessionController.value.isScreenShared
-        ? AgoraVideoView(
-            controller: VideoViewController(
-              rtcEngine: widget.client.sessionController.value.engine!,
-              canvas: const VideoCanvas(
-                uid: 0,
-                sourceType: VideoSourceType.videoSourceScreen,
-              ),
-            ),
-          )
-        : AgoraVideoView(
-            controller: VideoViewController(
-              rtcEngine: widget.client.sessionController.value.engine!,
-              canvas: VideoCanvas(uid: 0, renderMode: widget.renderModeType),
-              useFlutterTexture: widget.useFlutterTexture!,
-              useAndroidSurfaceView: widget.useAndroidSurfaceView!,
-            ),
-          );
+    final agoraSettings = widget.client.sessionController.value;
+    final VideoViewController controller;
+    if (agoraSettings.isScreenShared) {
+      controller = VideoViewController(
+        rtcEngine: agoraSettings.engine!,
+        canvas: const VideoCanvas(
+          uid: 0,
+          sourceType: VideoSourceType.videoSourceScreen,
+        ),
+      );
+    } else {
+      controller = VideoViewController(
+        rtcEngine: agoraSettings.engine!,
+        canvas: VideoCanvas(uid: 0, renderMode: widget.renderModeType),
+        useFlutterTexture: widget.useFlutterTexture!,
+        useAndroidSurfaceView: widget.useAndroidSurfaceView!,
+      );
+    }
+    return AgoraVideoView(controller: controller);
   }
 
   Widget _getRemoteViews(int uid) {
+    final agoraSettings = widget.client.sessionController.value;
     return AgoraVideoView(
       controller: VideoViewController.remote(
-        rtcEngine: widget.client.sessionController.value.engine!,
+        rtcEngine: agoraSettings.engine!,
         canvas: VideoCanvas(uid: uid, renderMode: widget.renderModeType),
         connection: RtcConnection(
-            channelId: widget
-                .client.sessionController.value.connectionData!.channelName),
+          channelId: agoraSettings.connectionData!.channelName,
+        ),
         useFlutterTexture: widget.useFlutterTexture!,
         useAndroidSurfaceView: widget.useAndroidSurfaceView!,
       ),
     );
   }
 
-  /// Video view wrapper
-  Widget _videoView(view) {
-    return Expanded(child: Container(child: view));
-  }
-
   Widget _viewFloat() {
-    return widget.client.sessionController.value.users.isNotEmpty
-        ? Column(
-            children: [
-              Container(
-                height: widget.floatingLayoutContainerHeight ??
-                    MediaQuery.of(context).size.height * 0.2,
-                width: MediaQuery.of(context).size.width,
-                alignment: Alignment.topLeft,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: widget.client.sessionController.value.users.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    return widget.client.sessionController.value.users[index]
-                                .uid !=
-                            widget.client.sessionController.value.mainAgoraUser
-                                .uid
-                        ? Padding(
-                            key: Key('$index'),
-                            padding: widget.floatingLayoutSubViewPadding,
-                            child: Container(
-                              width: widget.floatingLayoutContainerWidth ??
-                                  MediaQuery.of(context).size.width / 3,
-                              child: Column(
-                                children: [
-                                  widget.client.sessionController.value
-                                              .users[index].uid ==
-                                          widget.client.sessionController.value
-                                              .localUid
-                                      ? Expanded(
-                                          child: Container(
-                                            color: Colors.black,
-                                            child: Stack(
-                                              children: [
-                                                Center(
-                                                  child: Text(
-                                                    'Local User',
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                                ),
-                                                !widget
-                                                            .client
-                                                            .sessionController
-                                                            .value
-                                                            .isLocalVideoDisabled &&
-                                                        !widget
-                                                            .client
-                                                            .sessionController
-                                                            .value
-                                                            .isScreenShared
-                                                    ? Column(
-                                                        children: [
-                                                          _videoView(
-                                                              _getLocalViews()),
-                                                        ],
-                                                      )
-                                                    : widget
-                                                        .disabledVideoWidget,
-                                                Positioned.fill(
-                                                  child: Align(
-                                                    alignment:
-                                                        Alignment.topLeft,
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              8),
-                                                      child: GestureDetector(
-                                                        onTap: () {
-                                                          widget.client
-                                                              .sessionController
-                                                              .setActiveSpeakerDisabled(
-                                                                  false);
-                                                          widget.client
-                                                              .sessionController
-                                                              .swapUser(
-                                                                  index: index);
-                                                        },
-                                                        child: Container(
-                                                          height: 24,
-                                                          decoration:
-                                                              BoxDecoration(
-                                                            color: Colors.blue,
-                                                            shape:
-                                                                BoxShape.circle,
-                                                          ),
-                                                          child: Icon(
-                                                            Icons
-                                                                .push_pin_rounded,
-                                                            color: Colors.white,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                                widget.showAVState!
-                                                    ? UserAVStateWidget(
-                                                        videoDisabled: widget
-                                                            .client
-                                                            .sessionController
-                                                            .value
-                                                            .isLocalVideoDisabled,
-                                                        muted: widget
-                                                            .client
-                                                            .sessionController
-                                                            .value
-                                                            .isLocalUserMuted,
-                                                      )
-                                                    : Container(),
-                                              ],
-                                            ),
-                                          ),
-                                        )
-                                      : widget.client.sessionController.value
-                                              .users[index].videoDisabled
-                                          ? Expanded(
-                                              child: Stack(
-                                                children: [
-                                                  Container(
-                                                    color: Colors.black,
-                                                  ),
-                                                  widget.disabledVideoWidget,
-                                                  Positioned.fill(
-                                                    child: Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .spaceBetween,
-                                                      children: [
-                                                        Align(
-                                                          alignment:
-                                                              Alignment.topLeft,
-                                                          child: Padding(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .all(8),
-                                                            child:
-                                                                GestureDetector(
-                                                              onTap: () {
-                                                                widget.client
-                                                                    .sessionController
-                                                                    .setActiveSpeakerDisabled(
-                                                                        true);
-                                                                widget.client
-                                                                    .sessionController
-                                                                    .swapUser(
-                                                                        index:
-                                                                            index);
-                                                              },
-                                                              child: Container(
-                                                                decoration:
-                                                                    BoxDecoration(
-                                                                  color: Colors
-                                                                      .white,
-                                                                  shape: BoxShape
-                                                                      .circle,
-                                                                ),
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                            .all(
-                                                                        3.0),
-                                                                child: Icon(
-                                                                  Icons
-                                                                      .push_pin_rounded,
-                                                                  color: Colors
-                                                                      .blue,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        Align(
-                                                          alignment: Alignment
-                                                              .topRight,
-                                                          child:
-                                                              widget.enableHostControl !=
-                                                                      true
-                                                                  ? Container()
-                                                                  : HostControls(
-                                                                      client: widget
-                                                                          .client,
-                                                                      videoDisabled: widget
-                                                                          .client
-                                                                          .sessionController
-                                                                          .value
-                                                                          .users[
-                                                                              index]
-                                                                          .videoDisabled,
-                                                                      muted: widget
-                                                                          .client
-                                                                          .sessionController
-                                                                          .value
-                                                                          .users[
-                                                                              index]
-                                                                          .muted,
-                                                                      index:
-                                                                          index,
-                                                                    ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  Positioned.fill(
-                                                      child: Align(
-                                                    alignment:
-                                                        Alignment.bottomLeft,
-                                                  )),
-                                                  widget.showAVState!
-                                                      ? UserAVStateWidget(
-                                                          videoDisabled: widget
-                                                              .client
-                                                              .sessionController
-                                                              .value
-                                                              .users[index]
-                                                              .videoDisabled,
-                                                          muted: widget
-                                                              .client
-                                                              .sessionController
-                                                              .value
-                                                              .users[index]
-                                                              .muted)
-                                                      : Container(),
-                                                ],
-                                              ),
-                                            )
-                                          : Expanded(
-                                              child: Stack(
-                                                children: [
-                                                  Column(
-                                                    children: [
-                                                      _videoView(
-                                                        _getRemoteViews(
-                                                          widget
-                                                              .client
-                                                              .sessionController
-                                                              .value
-                                                              .users[index]
-                                                              .uid,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  Positioned.fill(
-                                                    child: Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .spaceBetween,
-                                                      children: [
-                                                        Align(
-                                                          alignment:
-                                                              Alignment.topLeft,
-                                                          child: Padding(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .all(8),
-                                                            child:
-                                                                GestureDetector(
-                                                              onTap: () {
-                                                                widget.client
-                                                                    .sessionController
-                                                                    .setActiveSpeakerDisabled(
-                                                                        true);
-                                                                widget.client
-                                                                    .sessionController
-                                                                    .swapUser(
-                                                                        index:
-                                                                            index);
-                                                              },
-                                                              child: Container(
-                                                                decoration:
-                                                                    BoxDecoration(
-                                                                  color: Colors
-                                                                      .white,
-                                                                  shape: BoxShape
-                                                                      .circle,
-                                                                ),
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                            .all(
-                                                                        3.0),
-                                                                child: Icon(
-                                                                  Icons
-                                                                      .push_pin_rounded,
-                                                                  color: Colors
-                                                                      .blue,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        Align(
-                                                          alignment: Alignment
-                                                              .topRight,
-                                                          child:
-                                                              widget.enableHostControl !=
-                                                                      true
-                                                                  ? Container()
-                                                                  : HostControls(
-                                                                      client: widget
-                                                                          .client,
-                                                                      videoDisabled: widget
-                                                                          .client
-                                                                          .sessionController
-                                                                          .value
-                                                                          .users[
-                                                                              index]
-                                                                          .videoDisabled,
-                                                                      muted: widget
-                                                                          .client
-                                                                          .sessionController
-                                                                          .value
-                                                                          .users[
-                                                                              index]
-                                                                          .muted,
-                                                                      index:
-                                                                          index,
-                                                                    ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  widget.showAVState!
-                                                      ? UserAVStateWidget(
-                                                          videoDisabled: widget
-                                                              .client
-                                                              .sessionController
-                                                              .value
-                                                              .users[index]
-                                                              .videoDisabled,
-                                                          muted: widget
-                                                              .client
-                                                              .sessionController
-                                                              .value
-                                                              .users[index]
-                                                              .muted)
-                                                      : Container(),
-                                                ],
-                                              ),
-                                            ),
-                                ],
-                              ),
-                            ),
-                          )
-                        : Container();
-                  },
+    final agoraSettings = widget.client.sessionController.value;
+    if (agoraSettings.users.isNotEmpty) {
+      Widget itemBuilder(BuildContext context, int index) {
+        final user = agoraSettings.users[index];
+        if (user.uid == agoraSettings.mainAgoraUser.uid) {
+          return SizedBox.shrink();
+        }
+
+        final stack = Stack(
+          children: [
+            if (user.uid == agoraSettings.localUid) ...[
+              Positioned.fill(child: ColoredBox(color: Colors.black)),
+              Center(
+                child: Text(
+                  'Local User',
+                  style: TextStyle(color: Colors.white),
                 ),
               ),
-              widget.client.sessionController.value.mainAgoraUser.uid !=
-                          widget.client.sessionController.value.localUid &&
-                      widget.client.sessionController.value.mainAgoraUser.uid !=
-                          0
-                  ? Expanded(
-                      child: Stack(
-                        children: [
-                          Container(
-                            padding: widget.floatingLayoutMainViewPadding,
-                            child: widget.client.sessionController.value
-                                    .mainAgoraUser.videoDisabled
-                                ? widget.disabledVideoWidget
-                                : Column(
-                                    children: [
-                                      _videoView(_getRemoteViews(widget
-                                          .client
-                                          .sessionController
-                                          .value
-                                          .mainAgoraUser
-                                          .uid))
-                                    ],
-                                  ),
-                          ),
-                          Align(
-                            alignment: Alignment.topRight,
-                            child: widget.enableHostControl != true
-                                ? Container()
-                                : HostControls(
-                                    client: widget.client,
-                                    videoDisabled: widget
-                                        .client
-                                        .sessionController
-                                        .value
-                                        .mainAgoraUser
-                                        .videoDisabled,
-                                    muted: widget.client.sessionController.value
-                                        .mainAgoraUser.muted,
-                                    index: widget
-                                        .client.sessionController.value.users
-                                        .indexWhere(
-                                      (element) =>
-                                          element.uid ==
-                                          widget.client.sessionController.value
-                                              .mainAgoraUser.uid,
-                                    ),
-                                  ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : Expanded(
-                      child: Container(
-                        padding: widget.floatingLayoutMainViewPadding,
-                        child: widget.client.sessionController.value
-                                    .isLocalVideoDisabled &&
-                                !widget.client.sessionController.value
-                                    .isScreenShared
-                            ? widget.disabledVideoWidget
-                            : Stack(
-                                children: [
-                                  Container(
-                                    color: Colors.black,
-                                    child: Center(
-                                      child: Text(
-                                        'Local User',
-                                        style: TextStyle(color: Colors.white),
-                                      ),
-                                    ),
-                                  ),
-                                  Column(
-                                    children: [
-                                      _videoView(
-                                        _getLocalViews(),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                      ),
+              if (agoraSettings.isLocalVideoDisabled ||
+                  agoraSettings.isScreenShared)
+                widget.disabledVideoWidget
+              else
+                Expanded(child: _getLocalViews()),
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: GestureDetector(
+                  onTap: () {
+                    widget.client.sessionController
+                        .setActiveSpeakerDisabled(false);
+                    widget.client.sessionController.swapUser(index: index);
+                  },
+                  child: Container(
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: Colors.blue,
+                      shape: BoxShape.circle,
                     ),
-            ],
-          )
-        : widget.client.sessionController.value.clientRoleType ==
-                ClientRoleType.clientRoleBroadcaster
-            ? widget.client.sessionController.value.isLocalVideoDisabled &&
-                    !widget.client.sessionController.value.isScreenShared
-                ? Column(
-                    children: [
-                      Expanded(child: widget.disabledVideoWidget),
-                    ],
-                  )
-                : Container(
-                    child: Column(
-                      children: <Widget>[_videoView(_getLocalViews())],
-                    ),
-                  )
-            : Column(
-                children: [
-                  Expanded(
-                    child: Container(
+                    child: Icon(
+                      Icons.push_pin_rounded,
                       color: Colors.white,
-                      child: Center(
-                        child: Text(
-                          'Waiting for the host to join.',
-                          style: TextStyle(color: Colors.black),
+                    ),
+                  ),
+                ),
+              ),
+              if (widget.showAVState!)
+                UserAVStateWidget(
+                  videoDisabled: agoraSettings.isLocalVideoDisabled,
+                  muted: agoraSettings.isLocalUserMuted,
+                ),
+            ] else if (user.videoDisabled) ...[
+              Positioned.fill(child: ColoredBox(color: Colors.black)),
+              widget.disabledVideoWidget,
+              Positioned.fill(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Align(
+                      alignment: Alignment.topLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: GestureDetector(
+                          onTap: () {
+                            widget.client.sessionController
+                                .setActiveSpeakerDisabled(true);
+                            widget.client.sessionController
+                                .swapUser(index: index);
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            padding: const EdgeInsets.all(3.0),
+                            child: Icon(
+                              Icons.push_pin_rounded,
+                              color: Colors.blue,
+                            ),
+                          ),
                         ),
                       ),
                     ),
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: (widget.enableHostControl ?? false)
+                          ? HostControls(
+                              client: widget.client,
+                              videoDisabled: user.videoDisabled,
+                              muted: user.muted,
+                              index: index,
+                            )
+                          : SizedBox.shrink(),
+                    ),
+                  ],
+                ),
+              ),
+              if (widget.showAVState!)
+                UserAVStateWidget(
+                  videoDisabled: user.videoDisabled,
+                  muted: user.muted,
+                ),
+            ] else ...[
+              Expanded(child: _getRemoteViews(user.uid)),
+              Positioned.fill(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Align(
+                      alignment: Alignment.topLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: GestureDetector(
+                          onTap: () {
+                            widget.client.sessionController
+                                .setActiveSpeakerDisabled(true);
+                            widget.client.sessionController
+                                .swapUser(index: index);
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            padding: const EdgeInsets.all(3.0),
+                            child: Icon(
+                              Icons.push_pin_rounded,
+                              color: Colors.blue,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (widget.enableHostControl ?? false)
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: HostControls(
+                          client: widget.client,
+                          videoDisabled: user.videoDisabled,
+                          muted: user.muted,
+                          index: index,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (widget.showAVState!)
+                UserAVStateWidget(
+                  videoDisabled: user.videoDisabled,
+                  muted: user.muted,
+                ),
+            ],
+          ],
+        );
+        return Padding(
+          key: Key('$index'),
+          padding: widget.floatingLayoutSubViewPadding,
+          child: SizedBox(
+            width: widget.floatingLayoutContainerWidth ??
+                MediaQuery.of(context).size.width / 3,
+            child: Expanded(child: stack),
+          ),
+        );
+      }
+
+      final mainUser = agoraSettings.mainAgoraUser;
+      return Column(
+        children: [
+          Container(
+            height: widget.floatingLayoutContainerHeight ??
+                MediaQuery.of(context).size.height * 0.2,
+            width: double.infinity,
+            alignment: Alignment.topLeft,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: agoraSettings.users.length,
+              itemBuilder: itemBuilder,
+            ),
+          ),
+          if (mainUser.uid != agoraSettings.localUid && mainUser.uid != 0)
+            Expanded(
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: widget.floatingLayoutMainViewPadding,
+                    child: mainUser.videoDisabled
+                        ? widget.disabledVideoWidget
+                        : SizedBox.expand(child: _getRemoteViews(mainUser.uid)),
                   ),
+                  if (widget.enableHostControl ?? false)
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: HostControls(
+                        client: widget.client,
+                        videoDisabled: mainUser.videoDisabled,
+                        muted: mainUser.muted,
+                        index: agoraSettings.users.indexWhere(
+                          (element) => element.uid == mainUser.uid,
+                        ),
+                      ),
+                    ),
                 ],
-              );
+              ),
+            )
+          else
+            Expanded(
+              child: Padding(
+                padding: widget.floatingLayoutMainViewPadding,
+                child: agoraSettings.isLocalVideoDisabled &&
+                        !agoraSettings.isScreenShared
+                    ? widget.disabledVideoWidget
+                    : Stack(
+                        children: [
+                          SizedBox.expand(
+                            child: ColoredBox(
+                              color: Colors.black,
+                              child: Center(
+                                child: Text(
+                                  'Local User',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox.expand(
+                            child: _getLocalViews(),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+        ],
+      );
+    }
+    if (agoraSettings.clientRoleType == ClientRoleType.clientRoleBroadcaster) {
+      return SizedBox.expand(
+        child:
+            agoraSettings.isLocalVideoDisabled && !agoraSettings.isScreenShared
+                ? widget.disabledVideoWidget
+                : _getLocalViews(),
+      );
+    }
+    return SizedBox.expand(
+      child: ColoredBox(
+        color: Colors.white,
+        child: Center(
+          child: Text(
+            'Waiting for the host to join.',
+            style: TextStyle(color: Colors.black),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -568,99 +358,67 @@ class _FloatingLayoutState extends State<FloatingLayout> {
     return ValueListenableBuilder(
       valueListenable: widget.client.sessionController,
       builder: (context, AgoraSettings agoraSettings, widgetx) {
+        void buttonToggle() {
+          if (agoraSettings.showMicMessage &&
+              !agoraSettings.showCameraMessage) {
+            toggleMute(sessionController: widget.client.sessionController);
+          } else {
+            toggleCamera(sessionController: widget.client.sessionController);
+          }
+          agoraSettings = agoraSettings.copyWith(
+            displaySnackbar: false,
+            showMicMessage: false,
+            showCameraMessage: false,
+          );
+        }
+
         return Center(
           child: Stack(
             children: [
               _viewFloat(),
-              widget.showNumberOfUsers == null ||
-                      widget.showNumberOfUsers == false
-                  ? Container()
-                  : Positioned.fill(
-                      child: Align(
-                        alignment: Alignment.topRight,
-                        child: NumberOfUsers(
-                          userCount: widget
-                              .client.sessionController.value.users.length,
-                        ),
-                      ),
-                    ),
-              Positioned.fill(
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Visibility(
-                    child: Container(
-                        color: Colors.white,
-                        width: MediaQuery.of(context).size.width,
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            if (widget
-                                .client.sessionController.value.showMicMessage)
-                              widget.client.sessionController.value
-                                          .muteRequest ==
-                                      MicState.muted
-                                  ? Text("Please unmute your mic")
-                                  : Text("Please mute your mic"),
-                            if (widget.client.sessionController.value
-                                .showCameraMessage)
-                              widget.client.sessionController.value
-                                          .cameraRequest ==
-                                      CameraState.disabled
-                                  ? Text("Please turn on your camera")
-                                  : Text("Please turn off your camera"),
-                            TextButton(
-                              onPressed: () {
-                                widget.client.sessionController.value
-                                            .showMicMessage &&
-                                        !widget.client.sessionController.value
-                                            .showCameraMessage
-                                    ? toggleMute(
-                                        sessionController:
-                                            widget.client.sessionController,
-                                      )
-                                    : toggleCamera(
-                                        sessionController:
-                                            widget.client.sessionController,
-                                      );
-                                widget.client.sessionController.value = widget
-                                    .client.sessionController.value
-                                    .copyWith(
-                                  displaySnackbar: false,
-                                  showMicMessage: false,
-                                  showCameraMessage: false,
-                                );
-                              },
-                              child: widget.client.sessionController.value
-                                      .showMicMessage
-                                  ? widget.client.sessionController.value
-                                              .muteRequest ==
-                                          MicState.muted
-                                      ? Text(
-                                          "Unmute",
-                                          style: TextStyle(color: Colors.blue),
-                                        )
-                                      : Text(
-                                          "Mute",
-                                          style: TextStyle(color: Colors.blue),
-                                        )
-                                  : widget.client.sessionController.value
-                                              .cameraRequest ==
+              if (widget.showNumberOfUsers ?? false)
+                Align(
+                  alignment: Alignment.topRight,
+                  child: NumberOfUsers(userCount: agoraSettings.users.length),
+                ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Visibility(
+                  visible: agoraSettings.displaySnackbar,
+                  child: Container(
+                    color: Colors.white,
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        if (agoraSettings.showMicMessage)
+                          agoraSettings.muteRequest == MicState.muted
+                              ? Text("Please unmute your mic")
+                              : Text("Please mute your mic"),
+                        if (agoraSettings.showCameraMessage)
+                          agoraSettings.cameraRequest == CameraState.disabled
+                              ? Text("Please turn on your camera")
+                              : Text("Please turn off your camera"),
+                        TextButton(
+                          onPressed: buttonToggle,
+                          child: agoraSettings.showMicMessage
+                              ? Text(
+                                  agoraSettings.muteRequest == MicState.muted
+                                      ? "Unmute"
+                                      : "Mute",
+                                  style: TextStyle(color: Colors.blue),
+                                )
+                              : Text(
+                                  agoraSettings.cameraRequest ==
                                           CameraState.disabled
-                                      ? Text(
-                                          "Enable",
-                                          style: TextStyle(color: Colors.blue),
-                                        )
-                                      : Text(
-                                          "Disable",
-                                          style: TextStyle(color: Colors.blue),
-                                        ),
-                            )
-                          ],
-                        )),
-                    visible:
-                        widget.client.sessionController.value.displaySnackbar,
+                                      ? "Enable"
+                                      : "Disable",
+                                  style: TextStyle(color: Colors.blue),
+                                ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
